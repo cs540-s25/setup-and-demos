@@ -1,0 +1,16 @@
+<head>
+
+</head>
+
+<body>
+    <form method="POST" action="/">
+        <input type="text" name="query" placeholder="Search for a topic!">
+        <input type="submit" value="Search">
+    </form>
+    <h1>Headlines about {{ topic }}:</h1>
+    {% for i in range(10) %}
+    <p><b>
+            {{ headlines[i] }}
+        </b></p>
+    {% endfor %}
+</body>
