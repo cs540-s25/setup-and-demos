@@ -3,14 +3,19 @@
 import flask
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import find_dotenv, load_dotenv
+from flask_login import login_user, current_user, LoginManager, logout_user
+from flask_login.utils import login_required
+from flask_login import UserMixin
 import os
 
 load_dotenv(find_dotenv())
 
 app = flask.Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-# app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal@35.237.84.57/quickstart-db?unix_socket=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
+app.secret_key = "I am a secret key!"
 # app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal@35.237.84.57/quickstart-db?host=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal@35.237.84.57/quickstart-db?unix_socket=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
 # app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal/quickstart-instance?unix_socket=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
 # app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal/quickstart-instance?unix_socket=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
 
@@ -18,7 +23,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 db = SQLAlchemy(app)
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(40))
     password = db.Column(db.String(40))
@@ -34,6 +39,16 @@ class Password(db.Model):
 
 with app.app_context():
     db.create_all()
+
+
+login_manager = LoginManager()
+# login_manager.login_view = "login"
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_name):
+    return User.query.get(user_name)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -62,14 +77,16 @@ def login():
     user = User.query.filter_by(username=username).filter_by(password=password).first()
     if user:
         # pass the username argument to the passwords URL
+        login_user(user)
         return flask.redirect(flask.url_for("passwords", username=username))
     return flask.redirect(flask.url_for("index"))
 
 
 @app.route("/passwords/<username>", methods=["GET", "POST"])
+@login_required
 def passwords(username):
+    user = User.query.filter_by(username=username).first()
     if flask.request.method == "POST":
-        user = User.query.filter_by(username=username).first()
         password = Password(
             user_id=user.id,
             username=flask.request.form.get("username"),
@@ -79,7 +96,7 @@ def passwords(username):
         db.session.add(password)
         db.session.commit()
 
-    passwords = Password.query.all()
+    passwords = Password.query.filter_by(user_id=user.id).all()
     return flask.render_template(
         "passwords.html", username=username, passwords=passwords
     )
