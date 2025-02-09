@@ -82,14 +82,14 @@ def login():
     if bcrypt.check_password_hash(user.password, password):
         # pass the username argument to the passwords URL
         login_user(user)
-        return flask.redirect(flask.url_for("passwords", username=username))
+        return flask.redirect(flask.url_for("passwords"))
     return flask.redirect(flask.url_for("index"))
 
 
-@app.route("/passwords/<username>", methods=["GET", "POST"])
+@app.route("/passwords", methods=["GET", "POST"])
 @login_required
-def passwords(username):
-    user = User.query.filter_by(username=username).first()
+def passwords():
+    user = current_user
     if flask.request.method == "POST":
         password = Password(
             user_id=user.id,
@@ -102,7 +102,7 @@ def passwords(username):
 
     passwords = Password.query.filter_by(user_id=user.id).all()
     return flask.render_template(
-        "passwords.html", username=username, passwords=passwords
+        "passwords.html", username=user.username, passwords=passwords
     )
 
 
