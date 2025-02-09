@@ -6,6 +6,7 @@ from dotenv import find_dotenv, load_dotenv
 from flask_login import login_user, current_user, LoginManager, logout_user
 from flask_login.utils import login_required
 from flask_login import UserMixin
+from flask_bcrypt import Bcrypt
 import os
 
 load_dotenv(find_dotenv())
@@ -13,6 +14,7 @@ load_dotenv(find_dotenv())
 app = flask.Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.secret_key = "I am a secret key!"
+bcrypt = Bcrypt(app)
 # app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal@35.237.84.57/quickstart-db?host=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
 
 # app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://quickstart-user:alsodonotsteal@35.237.84.57/quickstart-db?unix_socket=/cloudsql/lecture-5-demo-redux:us-east1:quickstart-instance'
@@ -26,7 +28,7 @@ db = SQLAlchemy(app)
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(40))
-    password = db.Column(db.String(40))
+    password = db.Column(db.String(120))
 
 
 class Password(db.Model):
@@ -59,9 +61,11 @@ def index():
             print("Username already exists; not adding")
             pass  # this isn't great -- we should give some feedback to the user
         else:
+            password = flask.request.form["password"]
+            pwhash = bcrypt.generate_password_hash(password).decode("utf-8")
             user = User(
                 username=flask.request.form["username"],
-                password=flask.request.form["password"],
+                password=pwhash,
             )
             db.session.add(user)
             db.session.commit()
@@ -74,8 +78,8 @@ def index():
 def login():
     data = flask.request.form
     username, password = data.get("username"), data.get("password")
-    user = User.query.filter_by(username=username).filter_by(password=password).first()
-    if user:
+    user = User.query.filter_by(username=username).first()
+    if bcrypt.check_password_hash(user.password, password):
         # pass the username argument to the passwords URL
         login_user(user)
         return flask.redirect(flask.url_for("passwords", username=username))
