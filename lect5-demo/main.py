@@ -1,6 +1,7 @@
 import flask
 from flask import request
 from nyt import get_headlines
+import os
 
 app = flask.Flask(__name__)
 
@@ -15,4 +16,5 @@ def main():
     return flask.render_template("index.html", headlines=headlines, topic=query)
 
 
-app.run()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
