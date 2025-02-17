@@ -1,18 +1,31 @@
 import './App.css';
+import { useState } from 'react';
 
-function Square() {
+function Square(props) {
   return (
-    <button className="square">
-      
+    <button className="square" onClick={props.onClick}>
+      {props.value}
     </button>
   );
 }
 
 function Board() {
-  function renderSquare(i) {
-    return <Square/>;
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  const [player, setPlayer] = useState("X");
+
+  function handleClick(i) {
+    if (squares[i] !== null) {
+      return;
+    }
+    let newSquares = squares.slice();
+    newSquares[i] = squares[i] === null ? player : null;
+    setSquares(newSquares);
+    setPlayer(player === "X" ? "O" : "X");
   }
-  const status = 'Next player: X';
+  function renderSquare(i) {
+    return <Square value={squares[i]} onClick={() => handleClick(i)} />;
+  }
+  const status = `Next player: ${player}`;
 
   return (
     <div>
